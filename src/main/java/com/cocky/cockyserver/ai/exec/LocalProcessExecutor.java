@@ -206,6 +206,7 @@ public class LocalProcessExecutor implements CodeExecutor {
                 }
             } catch (IOException e) {
                 // 프로세스 강제 종료 시 스트림이 닫힐 수 있음 — 수집분까지만 사용.
+                log.debug("출력 스트림 조기 종료: {}", e.getMessage());
             }
         }
 
