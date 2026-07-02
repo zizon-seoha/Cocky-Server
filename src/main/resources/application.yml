@@ -20,3 +20,21 @@ spring:
     redis:
       host: localhost
       port: 6379
+
+ai:
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    timeout-ms: 60000
+  models:
+    generation: ${OPENAI_MODEL_GENERATION:gpt-5.4-mini}
+    instant-feedback: ${OPENAI_MODEL_INSTANT_FEEDBACK:gpt-5.4-nano}
+    round-feedback: ${OPENAI_MODEL_ROUND_FEEDBACK:gpt-5.4-nano}
+    weekly-feedback: ${OPENAI_MODEL_WEEKLY_FEEDBACK:gpt-5.4-mini}
+    monthly-feedback: ${OPENAI_MODEL_MONTHLY_FEEDBACK:gpt-5.4-mini}
+  executor: ${AI_EXECUTOR:local}
+  exec:
+    timeout-ms: 5000
+  generation:
+    max-retries: 3
+    similarity-threshold: 0.80
