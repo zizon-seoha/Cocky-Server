@@ -7,3 +7,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+# 이 파일은 테스트 클래스패스에서 main의 application.yml을 '대체'한다(병합 아님).
+# main에 ai.* 블록이 있어도 여기 없으면 테스트에선 사라진다 — 필요한 키는 여기 다시 선언.
+ai:
+  executor: demo
