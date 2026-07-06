@@ -44,3 +44,36 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.named('bootRun') {
+    def envFile = rootProject.file('.env')
+    if (envFile.exists()) {
+        def injectedCount = 0
+        envFile.eachLine { rawLine ->
+            def line = rawLine.trim()
+            if (line.isEmpty() || line.startsWith('#')) {
+                return
+            }
+            def separatorIndex = line.indexOf('=')
+            if (separatorIndex <= 0) {
+                return
+            }
+            def key = line.substring(0, separatorIndex).trim()
+            def value = line.substring(separatorIndex + 1).trim()
+            if (value.length() >= 2
+                    && ((value.startsWith('"') && value.endsWith('"'))
+                    || (value.startsWith("'") && value.endsWith("'")))) {
+                value = value.substring(1, value.length() - 1)
+            }
+            environment(key, value)
+            injectedCount++
+        }
+        doFirst {
+            logger.lifecycle(".env 로드됨: ${injectedCount}개 환경변수 주입됨 (${envFile.name})")
+        }
+    } else {
+        doFirst {
+            logger.lifecycle(".env 파일 없음 — 환경변수 주입 스킵")
+        }
+    }
+}

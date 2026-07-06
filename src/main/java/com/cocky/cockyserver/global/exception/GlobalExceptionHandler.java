@@ -1,0 +1,37 @@
+package com.cocky.cockyserver.global.exception;
+
+import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
+import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+/** JwtAuthenticationEntryPoint의 401 응답과 동일한 {code, message} 형태로 에러를 내려준다. */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("요청 값이 올바르지 않습니다.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("INVALID_REQUEST", message));
+    }
+
+    @ExceptionHandler(OAuthCodeInvalidException.class)
+    public ResponseEntity<ErrorResponse> handleOAuthCodeInvalid(OAuthCodeInvalidException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse("OAUTH_CODE_INVALID", e.getMessage()));
+    }
+
+    @ExceptionHandler(SignupNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleSignupNotAllowed(SignupNotAllowedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("SIGNUP_NOT_ALLOWED", e.getMessage()));
+    }
+}

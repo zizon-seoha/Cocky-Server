@@ -3,6 +3,7 @@ package com.cocky.cockyserver.global.security;
 import com.cocky.cockyserver.global.security.jwt.JwtAuthenticationFilter;
 import com.cocky.cockyserver.global.security.jwt.JwtProperties;
 import com.cocky.cockyserver.global.security.jwt.JwtProvider;
+import jakarta.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,6 +59,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(PERMIT_ALL_PATHS).permitAll()
                         .anyRequest().authenticated()
                 )

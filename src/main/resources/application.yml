@@ -34,6 +34,16 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+datagsm:
+  authorization-base-url: https://oauth.authorization.datagsm.kr
+  resource-base-url: https://oauth.resource.datagsm.kr
+  client-id: ${DATAGSM_CLIENT_ID:}
+  client-secret: ${DATAGSM_CLIENT_SECRET:}
+  redirect-uri: ${DATAGSM_REDIRECT_URI:}
+
+auth:
+  admin-emails: ${ADMIN_EMAILS:}
+
 ai:
   openai:
     api-key: ${OPENAI_API_KEY:}
