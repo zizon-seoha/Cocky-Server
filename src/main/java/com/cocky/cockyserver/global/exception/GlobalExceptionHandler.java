@@ -1,6 +1,7 @@
 package com.cocky.cockyserver.global.exception;
 
 import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
+import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,5 +34,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSignupNotAllowed(SignupNotAllowedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse("SIGNUP_NOT_ALLOWED", e.getMessage()));
+    }
+
+    @ExceptionHandler(OAuthServerException.class)
+    public ResponseEntity<ErrorResponse> handleOAuthServerError(OAuthServerException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResponse("OAUTH_SERVER_ERROR", e.getMessage()));
     }
 }

@@ -4,6 +4,7 @@ import com.cocky.cockyserver.domain.auth.client.dto.DataGsmTokenResponse;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmUserInfoResponse;
 import com.cocky.cockyserver.domain.auth.config.DataGsmProperties;
 import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
+import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -12,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -74,9 +77,12 @@ public class DataGsmOauthClient {
         } catch (HttpClientErrorException e) {
             log.warn("DataGSM 토큰 교환 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new OAuthCodeInvalidException("유효하지 않거나 만료된 인가 코드입니다.");
+        } catch (HttpServerErrorException | ResourceAccessException e) {
+            log.warn("DataGSM 토큰 교환 중 서버 오류: {}", e.getMessage());
+            throw new OAuthServerException("DataGSM 인증 서버 오류입니다.");
         } catch (RestClientException e) {
             log.warn("DataGSM 토큰 교환 호출 실패: {}", e.getMessage());
-            throw new OAuthCodeInvalidException("DataGSM 인증 서버 호출에 실패했습니다.");
+            throw new OAuthServerException("DataGSM 인증 서버 호출에 실패했습니다.");
         }
     }
 
@@ -95,9 +101,12 @@ public class DataGsmOauthClient {
         } catch (HttpClientErrorException e) {
             log.warn("DataGSM 사용자 정보 조회 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new OAuthCodeInvalidException("DataGSM 사용자 정보 조회에 실패했습니다.");
+        } catch (HttpServerErrorException | ResourceAccessException e) {
+            log.warn("DataGSM 사용자 정보 조회 중 서버 오류: {}", e.getMessage());
+            throw new OAuthServerException("DataGSM 인증 서버 오류입니다.");
         } catch (RestClientException e) {
             log.warn("DataGSM 사용자 정보 조회 호출 실패: {}", e.getMessage());
-            throw new OAuthCodeInvalidException("DataGSM 인증 서버 호출에 실패했습니다.");
+            throw new OAuthServerException("DataGSM 인증 서버 호출에 실패했습니다.");
         }
     }
 

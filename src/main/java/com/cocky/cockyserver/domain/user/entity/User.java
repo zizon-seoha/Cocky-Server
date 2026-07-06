@@ -76,6 +76,14 @@ public class User {
         this.role = role;
     }
 
+    public void updateProfile(String name, Integer grade, Integer classNo, Integer number, String department) {
+        this.name = name;
+        this.grade = grade;
+        this.classNo = classNo;
+        this.number = number;
+        this.department = department;
+    }
+
     public void updateRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }

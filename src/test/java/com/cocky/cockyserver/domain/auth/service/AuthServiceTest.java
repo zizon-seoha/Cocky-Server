@@ -13,6 +13,7 @@ import com.cocky.cockyserver.domain.auth.client.dto.DataGsmStudentInfo;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmUserInfoResponse;
 import com.cocky.cockyserver.domain.auth.dto.SigninResponse;
 import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
+import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
 import com.cocky.cockyserver.domain.user.entity.Role;
 import com.cocky.cockyserver.domain.user.entity.User;
@@ -135,5 +136,36 @@ class AuthServiceTest {
 
         assertThrows(OAuthCodeInvalidException.class, () -> authService.signin(CODE));
         verify(userRepository, never()).findByDatagsmId(anyLong());
+    }
+
+    @Test
+    void dataGsmServerErrorPropagatesAsOAuthServerException() {
+        when(dataGsmOauthClient.exchangeToken(CODE))
+                .thenThrow(new OAuthServerException("DataGSM 인증 서버 오류입니다."));
+
+        assertThrows(OAuthServerException.class, () -> authService.signin(CODE));
+        verify(userRepository, never()).findByDatagsmId(anyLong());
+    }
+
+    @Test
+    void existingUserProfileIsSyncedOnSignin() {
+        User existingUser = new User(200L, "existing@gsm.hs.kr", "김철수", 1, 2, 3, "SW과", Role.STUDENT);
+        DataGsmStudentInfo updatedStudent = new DataGsmStudentInfo(
+                "김철수", 2, 5, 10, "20250315", "SW과", false, "GENERAL_STUDENT");
+        DataGsmUserInfoResponse userInfo =
+                new DataGsmUserInfoResponse(200L, "existing@gsm.hs.kr", "STUDENT", true, updatedStudent);
+        when(dataGsmOauthClient.exchangeToken(CODE)).thenReturn(DATAGSM_ACCESS_TOKEN);
+        when(dataGsmOauthClient.fetchUserInfo(DATAGSM_ACCESS_TOKEN)).thenReturn(userInfo);
+        when(userRepository.findByDatagsmId(200L)).thenReturn(Optional.of(existingUser));
+        when(jwtProvider.generateAccessToken(any(), any())).thenReturn("access-token");
+        when(jwtProvider.generateRefreshToken(any())).thenReturn("refresh-token");
+
+        authService.signin(CODE);
+
+        verify(userRepository, never()).save(any());
+        assertEquals(2, existingUser.getGrade());
+        assertEquals(5, existingUser.getClassNo());
+        assertEquals(10, existingUser.getNumber());
+        assertEquals("김철수", existingUser.getName());
     }
 }

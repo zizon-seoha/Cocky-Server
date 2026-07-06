@@ -10,8 +10,8 @@ import com.cocky.cockyserver.domain.user.entity.User;
 import com.cocky.cockyserver.domain.user.repository.UserRepository;
 import com.cocky.cockyserver.global.security.jwt.JwtProvider;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +28,7 @@ public class AuthService {
     private final DataGsmOauthClient dataGsmOauthClient;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
-    private final List<String> adminEmails;
+    private final Set<String> adminEmails;
 
     public AuthService(DataGsmOauthClient dataGsmOauthClient,
                         UserRepository userRepository,
@@ -40,7 +40,7 @@ public class AuthService {
         this.adminEmails = Arrays.stream(adminEmails.split(","))
                 .map(String::trim)
                 .filter(email -> !email.isEmpty())
-                .toList();
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Transactional
@@ -51,6 +51,7 @@ public class AuthService {
         validateSignupEligibility(userInfo);
 
         User user = userRepository.findByDatagsmId(userInfo.id())
+                .map(existing -> syncProfile(existing, userInfo))
                 .orElseGet(() -> registerUser(userInfo));
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getRole());
@@ -69,6 +70,12 @@ public class AuthService {
         if (!eligible) {
             throw new SignupNotAllowedException("가입 대상이 아닙니다.");
         }
+    }
+
+    private User syncProfile(User user, DataGsmUserInfoResponse userInfo) {
+        DataGsmStudentInfo student = userInfo.student();
+        user.updateProfile(student.name(), student.grade(), student.classNum(), student.number(), student.major());
+        return user;
     }
 
     private User registerUser(DataGsmUserInfoResponse userInfo) {
