@@ -51,8 +51,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     request.setAttribute(AUTH_ERROR_ATTRIBUTE, AuthErrorCode.TOKEN_INVALID);
                 }
             } catch (ExpiredJwtException e) {
+                SecurityContextHolder.clearContext();
                 request.setAttribute(AUTH_ERROR_ATTRIBUTE, AuthErrorCode.TOKEN_EXPIRED);
             } catch (JwtException | IllegalArgumentException e) {
+                SecurityContextHolder.clearContext();
                 request.setAttribute(AUTH_ERROR_ATTRIBUTE, AuthErrorCode.TOKEN_INVALID);
             }
         }

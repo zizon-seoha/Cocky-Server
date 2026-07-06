@@ -3,6 +3,7 @@ package com.cocky.cockyserver.global.security;
 import com.cocky.cockyserver.global.security.jwt.JwtAuthenticationFilter;
 import com.cocky.cockyserver.global.security.jwt.JwtProperties;
 import com.cocky.cockyserver.global.security.jwt.JwtProvider;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -41,7 +42,10 @@ public class SecurityConfig {
                            @Value("${cors.allowed-origins:http://localhost:3000}") String corsAllowedOrigins) {
         this.jwtProvider = jwtProvider;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-        this.corsAllowedOrigins = List.of(corsAllowedOrigins.split(","));
+        this.corsAllowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
     }
 
     @Bean
