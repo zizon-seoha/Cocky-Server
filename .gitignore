@@ -43,3 +43,4 @@ harness
 ### Secrets ###
 .env
 !.env.example
+*.diff
