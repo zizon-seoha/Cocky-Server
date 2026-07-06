@@ -3,12 +3,18 @@ package com.cocky.cockyserver.domain.auth.service;
 import com.cocky.cockyserver.domain.auth.client.DataGsmOauthClient;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmStudentInfo;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmUserInfoResponse;
+import com.cocky.cockyserver.domain.auth.dto.ReissueResponse;
 import com.cocky.cockyserver.domain.auth.dto.SigninResponse;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenExpiredException;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
 import com.cocky.cockyserver.domain.user.entity.Role;
 import com.cocky.cockyserver.domain.user.entity.User;
 import com.cocky.cockyserver.domain.user.repository.UserRepository;
 import com.cocky.cockyserver.global.security.jwt.JwtProvider;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,6 +65,44 @@ public class AuthService {
         user.updateRefreshToken(refreshToken);
 
         return new SigninResponse(accessToken, refreshToken);
+    }
+
+    @Transactional
+    public ReissueResponse reissue(String refreshToken) {
+        Claims claims = parseRefreshClaims(refreshToken);
+        Long userId = jwtProvider.getUserId(claims);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RefreshTokenInvalidException("유효하지 않은 토큰입니다."));
+        if (!refreshToken.equals(user.getRefreshToken())) {
+            throw new RefreshTokenInvalidException("유효하지 않은 토큰입니다.");
+        }
+
+        String newAccessToken = jwtProvider.generateAccessToken(user.getId(), user.getRole());
+        String newRefreshToken = jwtProvider.generateRefreshToken(user.getId());
+        user.updateRefreshToken(newRefreshToken);
+
+        return new ReissueResponse(newAccessToken, newRefreshToken);
+    }
+
+    @Transactional
+    public void signout(Long userId) {
+        userRepository.findById(userId).ifPresent(user -> user.updateRefreshToken(null));
+    }
+
+    private Claims parseRefreshClaims(String refreshToken) {
+        Claims claims;
+        try {
+            claims = jwtProvider.parseClaims(refreshToken);
+        } catch (ExpiredJwtException e) {
+            throw new RefreshTokenExpiredException("토큰이 만료되었습니다.");
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new RefreshTokenInvalidException("유효하지 않은 토큰입니다.");
+        }
+        if (!jwtProvider.isRefreshToken(claims)) {
+            throw new RefreshTokenInvalidException("유효하지 않은 토큰입니다.");
+        }
+        return claims;
     }
 
     private void validateSignupEligibility(DataGsmUserInfoResponse userInfo) {

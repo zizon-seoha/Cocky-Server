@@ -36,14 +36,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(
-                new ErrorResponse(code.name(), message(code))
+                new ErrorResponse(code.name(), code.message())
         ));
-    }
-
-    private String message(AuthErrorCode code) {
-        return switch (code) {
-            case TOKEN_EXPIRED -> "토큰이 만료되었습니다.";
-            case TOKEN_INVALID -> "유효하지 않은 토큰입니다.";
-        };
     }
 }
