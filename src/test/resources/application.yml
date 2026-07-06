@@ -14,3 +14,8 @@ spring:
 # main에 ai.* 블록이 있어도 여기 없으면 테스트에선 사라진다 — 필요한 키는 여기 다시 선언.
 ai:
   executor: demo
+
+jwt:
+  secret-key: test-only-jwt-secret-key-not-for-production-use-1234567890
+  access-expiration: 3600000
+  refresh-expiration: 1209600000
