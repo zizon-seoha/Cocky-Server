@@ -19,3 +19,13 @@ jwt:
   secret-key: test-only-jwt-secret-key-not-for-production-use-1234567890
   access-expiration: 3600000
   refresh-expiration: 1209600000
+
+datagsm:
+  authorization-base-url: https://oauth.authorization.datagsm.kr
+  resource-base-url: https://oauth.resource.datagsm.kr
+  client-id: ""
+  client-secret: ""
+  redirect-uri: ""
+
+auth:
+  admin-emails: ""
