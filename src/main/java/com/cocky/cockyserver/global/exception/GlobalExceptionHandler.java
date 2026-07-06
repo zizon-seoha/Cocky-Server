@@ -2,7 +2,10 @@ package com.cocky.cockyserver.global.exception;
 
 import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenExpiredException;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
+import com.cocky.cockyserver.global.security.AuthErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -40,5 +43,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOAuthServerError(OAuthServerException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResponse("OAUTH_SERVER_ERROR", e.getMessage()));
+    }
+
+    @ExceptionHandler(RefreshTokenExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenExpired(RefreshTokenExpiredException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(AuthErrorCode.TOKEN_EXPIRED.name(), AuthErrorCode.TOKEN_EXPIRED.message()));
+    }
+
+    @ExceptionHandler(RefreshTokenInvalidException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenInvalid(RefreshTokenInvalidException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(AuthErrorCode.TOKEN_INVALID.name(), AuthErrorCode.TOKEN_INVALID.message()));
     }
 }

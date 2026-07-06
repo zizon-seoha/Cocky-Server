@@ -1,6 +1,7 @@
 package com.cocky.cockyserver.domain.auth.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -11,14 +12,19 @@ import static org.mockito.Mockito.when;
 import com.cocky.cockyserver.domain.auth.client.DataGsmOauthClient;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmStudentInfo;
 import com.cocky.cockyserver.domain.auth.client.dto.DataGsmUserInfoResponse;
+import com.cocky.cockyserver.domain.auth.dto.ReissueResponse;
 import com.cocky.cockyserver.domain.auth.dto.SigninResponse;
 import com.cocky.cockyserver.domain.auth.exception.OAuthCodeInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenExpiredException;
+import com.cocky.cockyserver.domain.auth.exception.RefreshTokenInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
 import com.cocky.cockyserver.domain.user.entity.Role;
 import com.cocky.cockyserver.domain.user.entity.User;
 import com.cocky.cockyserver.domain.user.repository.UserRepository;
 import com.cocky.cockyserver.global.security.jwt.JwtProvider;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,7 @@ class AuthServiceTest {
 
     private static final String CODE = "auth-code";
     private static final String DATAGSM_ACCESS_TOKEN = "dgsm-access-token";
+    private static final String REFRESH_TOKEN = "refresh-token-abc";
 
     @Mock
     private DataGsmOauthClient dataGsmOauthClient;
@@ -41,6 +48,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtProvider jwtProvider;
+
+    @Mock
+    private Claims claims;
 
     private AuthService authService;
 
@@ -167,5 +177,79 @@ class AuthServiceTest {
         assertEquals(5, existingUser.getClassNo());
         assertEquals(10, existingUser.getNumber());
         assertEquals("김철수", existingUser.getName());
+    }
+
+    @Test
+    void reissueRotatesTokensWhenRefreshTokenMatchesDb() {
+        User user = new User(200L, "existing@gsm.hs.kr", "김철수", 1, 2, 3, "SW과", Role.STUDENT);
+        user.updateRefreshToken(REFRESH_TOKEN);
+        when(jwtProvider.parseClaims(REFRESH_TOKEN)).thenReturn(claims);
+        when(jwtProvider.isRefreshToken(claims)).thenReturn(true);
+        when(jwtProvider.getUserId(claims)).thenReturn(200L);
+        when(userRepository.findById(200L)).thenReturn(Optional.of(user));
+        when(jwtProvider.generateAccessToken(any(), any())).thenReturn("new-access-token");
+        when(jwtProvider.generateRefreshToken(any())).thenReturn("new-refresh-token");
+
+        ReissueResponse response = authService.reissue(REFRESH_TOKEN);
+
+        assertEquals("new-access-token", response.accessToken());
+        assertEquals("new-refresh-token", response.refreshToken());
+        assertEquals("new-refresh-token", user.getRefreshToken());
+    }
+
+    @Test
+    void reissueFailsWhenDbRefreshTokenDoesNotMatch() {
+        User user = new User(200L, "existing@gsm.hs.kr", "김철수", 1, 2, 3, "SW과", Role.STUDENT);
+        user.updateRefreshToken("already-rotated-or-logged-out-token");
+        when(jwtProvider.parseClaims(REFRESH_TOKEN)).thenReturn(claims);
+        when(jwtProvider.isRefreshToken(claims)).thenReturn(true);
+        when(jwtProvider.getUserId(claims)).thenReturn(200L);
+        when(userRepository.findById(200L)).thenReturn(Optional.of(user));
+
+        assertThrows(RefreshTokenInvalidException.class, () -> authService.reissue(REFRESH_TOKEN));
+    }
+
+    @Test
+    void reissueFailsWhenTokenIsAccessTokenNotRefresh() {
+        when(jwtProvider.parseClaims(REFRESH_TOKEN)).thenReturn(claims);
+        when(jwtProvider.isRefreshToken(claims)).thenReturn(false);
+
+        assertThrows(RefreshTokenInvalidException.class, () -> authService.reissue(REFRESH_TOKEN));
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void reissueFailsWhenRefreshTokenExpired() {
+        when(jwtProvider.parseClaims(REFRESH_TOKEN))
+                .thenThrow(new ExpiredJwtException(null, claims, "만료된 토큰"));
+
+        assertThrows(RefreshTokenExpiredException.class, () -> authService.reissue(REFRESH_TOKEN));
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void signoutClearsRefreshToken() {
+        User user = new User(200L, "existing@gsm.hs.kr", "김철수", 1, 2, 3, "SW과", Role.STUDENT);
+        user.updateRefreshToken(REFRESH_TOKEN);
+        when(userRepository.findById(200L)).thenReturn(Optional.of(user));
+
+        authService.signout(200L);
+
+        assertNull(user.getRefreshToken());
+    }
+
+    @Test
+    void reissueAfterSignoutIsRejected() {
+        User user = new User(200L, "existing@gsm.hs.kr", "김철수", 1, 2, 3, "SW과", Role.STUDENT);
+        user.updateRefreshToken(REFRESH_TOKEN);
+        when(userRepository.findById(200L)).thenReturn(Optional.of(user));
+
+        authService.signout(200L);
+
+        when(jwtProvider.parseClaims(REFRESH_TOKEN)).thenReturn(claims);
+        when(jwtProvider.isRefreshToken(claims)).thenReturn(true);
+        when(jwtProvider.getUserId(claims)).thenReturn(200L);
+
+        assertThrows(RefreshTokenInvalidException.class, () -> authService.reissue(REFRESH_TOKEN));
     }
 }
