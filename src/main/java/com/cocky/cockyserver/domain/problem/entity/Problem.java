@@ -3,6 +3,8 @@ package com.cocky.cockyserver.domain.problem.entity;
 import com.cocky.cockyserver.domain.round.entity.Round;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -35,8 +37,9 @@ public class Problem {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false, length = 10)
-    private String difficulty;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Language language;
 
     @Column(name = "is_ai_generated", nullable = false)
     private boolean aiGenerated;
@@ -44,11 +47,11 @@ public class Problem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Problem(Round round, String title, String content, String difficulty, boolean aiGenerated) {
+    public Problem(Round round, String title, String content, Language language, boolean aiGenerated) {
         this.round = round;
         this.title = title;
         this.content = content;
-        this.difficulty = difficulty;
+        this.language = language;
         this.aiGenerated = aiGenerated;
         this.createdAt = LocalDateTime.now();
     }
