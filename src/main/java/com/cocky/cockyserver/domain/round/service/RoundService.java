@@ -19,9 +19,14 @@ public class RoundService {
 
     @Transactional(readOnly = true)
     public CurrentRoundResponse getCurrentRound() {
+        return CurrentRoundResponse.from(getCurrentActiveRound());
+    }
+
+    /** 다른 도메인 서비스에서 "현재 열려있는 회차" 엔티티가 필요할 때 재사용한다. */
+    @Transactional(readOnly = true)
+    public Round getCurrentActiveRound() {
         LocalDateTime now = LocalDateTime.now(clock);
-        Round round = roundRepository.findByActiveTrueAndOpenAtLessThanEqualAndCloseAtAfter(now, now)
+        return roundRepository.findByActiveTrueAndOpenAtLessThanEqualAndCloseAtAfter(now, now)
                 .orElseThrow(() -> new RoundNotFoundException("현재 열려있는 회차가 없습니다."));
-        return CurrentRoundResponse.from(round);
     }
 }
