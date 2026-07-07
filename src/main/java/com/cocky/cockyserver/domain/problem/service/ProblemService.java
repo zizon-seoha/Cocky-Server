@@ -23,7 +23,7 @@ public class ProblemService {
     @Transactional(readOnly = true)
     public RoundProblemsResponse getCurrentRoundProblems() {
         Round round = roundService.getCurrentActiveRound();
-        List<ProblemSummaryResponse> problems = problemRepository.findByRoundId(round.getId()).stream()
+        List<ProblemSummaryResponse> problems = problemRepository.findByRoundIdOrderByIdAsc(round.getId()).stream()
                 .map(ProblemSummaryResponse::from)
                 .toList();
         return new RoundProblemsResponse(round.getId(), problems);
