@@ -5,6 +5,7 @@ import com.cocky.cockyserver.domain.auth.exception.OAuthServerException;
 import com.cocky.cockyserver.domain.auth.exception.RefreshTokenExpiredException;
 import com.cocky.cockyserver.domain.auth.exception.RefreshTokenInvalidException;
 import com.cocky.cockyserver.domain.auth.exception.SignupNotAllowedException;
+import com.cocky.cockyserver.domain.round.exception.RoundNotFoundException;
 import com.cocky.cockyserver.global.security.AuthErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,5 +56,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRefreshTokenInvalid(RefreshTokenInvalidException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(AuthErrorCode.TOKEN_INVALID.name(), AuthErrorCode.TOKEN_INVALID.message()));
+    }
+
+    @ExceptionHandler(RoundNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRoundNotFound(RoundNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("ROUND_NOT_FOUND", e.getMessage()));
     }
 }
