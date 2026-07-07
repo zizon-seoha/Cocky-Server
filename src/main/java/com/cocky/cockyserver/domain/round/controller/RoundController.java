@@ -2,20 +2,18 @@ package com.cocky.cockyserver.domain.round.controller;
 
 import com.cocky.cockyserver.domain.round.dto.CurrentRoundResponse;
 import com.cocky.cockyserver.domain.round.service.RoundService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/rounds")
 public class RoundController {
 
     private final RoundService roundService;
-
-    public RoundController(RoundService roundService) {
-        this.roundService = roundService;
-    }
 
     @GetMapping("/current")
     public ResponseEntity<CurrentRoundResponse> getCurrentRound() {
