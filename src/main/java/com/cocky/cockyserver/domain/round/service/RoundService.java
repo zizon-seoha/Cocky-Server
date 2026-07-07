@@ -6,19 +6,16 @@ import com.cocky.cockyserver.domain.round.exception.RoundNotFoundException;
 import com.cocky.cockyserver.domain.round.repository.RoundRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class RoundService {
 
     private final RoundRepository roundRepository;
     private final Clock clock;
-
-    public RoundService(RoundRepository roundRepository, Clock clock) {
-        this.roundRepository = roundRepository;
-        this.clock = clock;
-    }
 
     @Transactional(readOnly = true)
     public CurrentRoundResponse getCurrentRound() {
