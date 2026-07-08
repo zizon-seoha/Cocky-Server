@@ -1,5 +1,6 @@
 package com.cocky.cockyserver.domain.submission.entity;
 
+import com.cocky.cockyserver.domain.problem.entity.Language;
 import com.cocky.cockyserver.domain.problem.entity.Problem;
 import com.cocky.cockyserver.domain.user.entity.User;
 import jakarta.persistence.Column;

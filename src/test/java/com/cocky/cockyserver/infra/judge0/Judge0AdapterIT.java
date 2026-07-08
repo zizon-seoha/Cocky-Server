@@ -1,0 +1,53 @@
+package com.cocky.cockyserver.infra.judge0;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import com.cocky.cockyserver.domain.problem.entity.Language;
+import com.cocky.cockyserver.domain.submission.entity.Verdict;
+import com.cocky.cockyserver.domain.submission.judge.JudgeRequest;
+import com.cocky.cockyserver.domain.submission.judge.JudgeResult;
+import com.cocky.cockyserver.domain.submission.judge.TestCaseIO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+/**
+ * 실제 Judge0 인스턴스가 필요한 수동 검증 — language_id 매핑/base64 인코딩/status 매핑이
+ * 진짜로 맞는지는 mock으로는 확인할 수 없어 여기서만 확인한다.
+ *
+ * <p>기본 {@code ./gradlew test}에서는 제외된다(judge0-it 태그, build.gradle 참고). 로컬에서
+ * Judge0를 띄운 뒤 {@code ./gradlew test --tests "*Judge0AdapterIT" -PincludeJudge0IT}로 실행.
+ */
+@Tag("judge0-it")
+class Judge0AdapterIT {
+
+    private final Judge0Properties properties = new Judge0Properties("http://localhost:2358", "", 2000, 131072);
+    private final Judge0Client client = new Judge0Client(properties, new ObjectMapper());
+    private final LanguageMapper languageMapper = new LanguageMapper();
+    private final Judge0Adapter adapter = new Judge0Adapter(client, languageMapper, properties);
+
+    @Test
+    void pythonCorrectAnswerIsAccepted() {
+        JudgeRequest request = new JudgeRequest(Language.PYTHON, "print(1 + 1)",
+                List.of(new TestCaseIO("", "2\n")));
+
+        JudgeResult result = adapter.judge(request);
+
+        assertEquals(Verdict.AC, result.verdict());
+        assertEquals(1, result.passedCount());
+        assertEquals(1, result.totalCount());
+    }
+
+    @Test
+    void pythonWrongAnswerIsRejected() {
+        JudgeRequest request = new JudgeRequest(Language.PYTHON, "print(1 + 1)",
+                List.of(new TestCaseIO("", "5\n")));
+
+        JudgeResult result = adapter.judge(request);
+
+        assertEquals(Verdict.WA, result.verdict());
+        assertEquals(0, result.passedCount());
+        assertEquals(1, result.totalCount());
+    }
+}

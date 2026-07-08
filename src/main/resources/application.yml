@@ -44,6 +44,12 @@ datagsm:
 auth:
   admin-emails: ${ADMIN_EMAILS:}
 
+judge0:
+  url: ${JUDGE0_URL:http://localhost:2358}
+  token: ${JUDGE0_TOKEN:}
+  default-time-limit-ms: 2000
+  default-memory-limit-kb: 131072
+
 ai:
   openai:
     api-key: ${OPENAI_API_KEY:}

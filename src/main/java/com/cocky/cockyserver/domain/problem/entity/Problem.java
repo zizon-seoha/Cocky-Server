@@ -41,17 +41,23 @@ public class Problem {
     @Column(nullable = false, length = 20)
     private Language language;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Difficulty difficulty;
+
     @Column(name = "is_ai_generated", nullable = false)
     private boolean aiGenerated;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Problem(Round round, String title, String content, Language language, boolean aiGenerated) {
+    public Problem(Round round, String title, String content, Language language, Difficulty difficulty,
+                   boolean aiGenerated) {
         this.round = round;
         this.title = title;
         this.content = content;
         this.language = language;
+        this.difficulty = difficulty;
         this.aiGenerated = aiGenerated;
         this.createdAt = LocalDateTime.now();
     }
