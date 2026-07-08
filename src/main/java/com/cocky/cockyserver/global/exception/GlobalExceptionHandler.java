@@ -9,6 +9,7 @@ import com.cocky.cockyserver.domain.problem.exception.ProblemNotFoundException;
 import com.cocky.cockyserver.domain.round.exception.RoundNotFoundException;
 import com.cocky.cockyserver.domain.submission.exception.LanguageMismatchException;
 import com.cocky.cockyserver.domain.submission.exception.RoundClosedException;
+import com.cocky.cockyserver.domain.submission.exception.TestCaseNotConfiguredException;
 import com.cocky.cockyserver.domain.submission.judge.JudgeExecutionException;
 import com.cocky.cockyserver.global.security.AuthErrorCode;
 import org.springframework.http.HttpStatus;
@@ -90,5 +91,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleJudgeExecutionFailed(JudgeExecutionException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResponse("JUDGE_EXECUTION_FAILED", e.getMessage()));
+    }
+
+    @ExceptionHandler(TestCaseNotConfiguredException.class)
+    public ResponseEntity<ErrorResponse> handleTestCaseNotConfigured(TestCaseNotConfiguredException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("TEST_CASE_NOT_CONFIGURED", e.getMessage()));
     }
 }

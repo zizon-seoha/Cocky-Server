@@ -73,8 +73,4 @@ public class Submission {
         this.verdict = verdict;
         this.score = score;
     }
-
-    public void markAsNotLatest() {
-        this.latest = false;
-    }
 }

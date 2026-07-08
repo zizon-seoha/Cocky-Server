@@ -1,9 +1,9 @@
 package com.cocky.cockyserver.domain.submission.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cocky.cockyserver.domain.problem.entity.Difficulty;
@@ -16,10 +16,10 @@ import com.cocky.cockyserver.domain.problem.repository.TestCaseRepository;
 import com.cocky.cockyserver.domain.round.entity.Round;
 import com.cocky.cockyserver.domain.submission.dto.SubmissionRequest;
 import com.cocky.cockyserver.domain.submission.dto.SubmissionResponse;
-import com.cocky.cockyserver.domain.submission.entity.Submission;
 import com.cocky.cockyserver.domain.submission.entity.Verdict;
 import com.cocky.cockyserver.domain.submission.exception.LanguageMismatchException;
 import com.cocky.cockyserver.domain.submission.exception.RoundClosedException;
+import com.cocky.cockyserver.domain.submission.exception.TestCaseNotConfiguredException;
 import com.cocky.cockyserver.domain.submission.judge.JudgeResult;
 import com.cocky.cockyserver.domain.submission.judge.JudgeService;
 import com.cocky.cockyserver.domain.submission.repository.SubmissionRepository;
@@ -134,14 +134,11 @@ class SubmissionServiceTest {
     void acVerdictAwardsDifficultyBaseScoreAndRotatesLatest() {
         Problem problem = problem(activeRound(), Language.PYTHON, Difficulty.HARD);
         User user = new User(100L, "student@gsm.hs.kr", "홍길동", 2, 3, 15, "SW과", Role.STUDENT);
-        Submission previous = new Submission(user, problem, Language.PYTHON, "old code");
         when(problemRepository.findById(PROBLEM_ID)).thenReturn(Optional.of(problem));
         when(problemRepository.getReferenceById(any())).thenReturn(problem);
         when(testCaseRepository.findByProblemIdOrderByIdAsc(any()))
                 .thenReturn(List.of(new TestCase(problem, "1", "1", true)));
         when(judgeService.judge(any())).thenReturn(new JudgeResult(Verdict.AC, 1, 1, 50, 1024));
-        when(submissionRepository.findByUserIdAndProblemIdAndLatestTrue(USER_ID, problem.getId()))
-                .thenReturn(List.of(previous));
         when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
         when(submissionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -151,7 +148,7 @@ class SubmissionServiceTest {
         assertEquals(new BigDecimal("70.00"), response.score());
         assertEquals(1, response.passedCount());
         assertEquals(1, response.totalCount());
-        assertFalse(previous.isLatest());
+        verify(submissionRepository).markPreviousNotLatest(USER_ID, problem.getId());
     }
 
     @Test
@@ -163,8 +160,6 @@ class SubmissionServiceTest {
         when(testCaseRepository.findByProblemIdOrderByIdAsc(any()))
                 .thenReturn(List.of(new TestCase(problem, "1", "1", true), new TestCase(problem, "2", "2", false)));
         when(judgeService.judge(any())).thenReturn(new JudgeResult(Verdict.WA, 1, 2, 50, 1024));
-        when(submissionRepository.findByUserIdAndProblemIdAndLatestTrue(USER_ID, problem.getId()))
-                .thenReturn(List.of());
         when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
         when(submissionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -174,5 +169,15 @@ class SubmissionServiceTest {
         assertEquals(new BigDecimal("0.00"), response.score());
         assertEquals(1, response.passedCount());
         assertEquals(2, response.totalCount());
+    }
+
+    @Test
+    void noTestCasesThrowsTestCaseNotConfigured() {
+        Problem problem = problem(activeRound(), Language.PYTHON, Difficulty.HARD);
+        when(problemRepository.findById(PROBLEM_ID)).thenReturn(Optional.of(problem));
+        when(testCaseRepository.findByProblemIdOrderByIdAsc(any())).thenReturn(List.of());
+
+        assertThrows(TestCaseNotConfiguredException.class,
+                () -> submissionService.submit(USER_ID, request(Language.PYTHON)));
     }
 }

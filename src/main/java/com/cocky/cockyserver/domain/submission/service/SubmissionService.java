@@ -13,6 +13,7 @@ import com.cocky.cockyserver.domain.submission.entity.Submission;
 import com.cocky.cockyserver.domain.submission.entity.Verdict;
 import com.cocky.cockyserver.domain.submission.exception.LanguageMismatchException;
 import com.cocky.cockyserver.domain.submission.exception.RoundClosedException;
+import com.cocky.cockyserver.domain.submission.exception.TestCaseNotConfiguredException;
 import com.cocky.cockyserver.domain.submission.judge.JudgeRequest;
 import com.cocky.cockyserver.domain.submission.judge.JudgeResult;
 import com.cocky.cockyserver.domain.submission.judge.JudgeService;
@@ -89,6 +90,9 @@ public class SubmissionService {
         List<TestCaseIO> cases = testCaseRepository.findByProblemIdOrderByIdAsc(problem.getId()).stream()
                 .map(this::toTestCaseIO)
                 .toList();
+        if (cases.isEmpty()) {
+            throw new TestCaseNotConfiguredException("문제에 테스트케이스가 없습니다. problemId=" + problem.getId());
+        }
         JudgeRequest judgeRequest = new JudgeRequest(request.language(), request.code(), cases);
         return new Validated(problem.getId(), problem.getDifficulty(), judgeRequest);
     }
@@ -100,8 +104,10 @@ public class SubmissionService {
                 ? validated.difficulty().baseScore()
                 : BigDecimal.ZERO.setScale(2);
 
-        submissionRepository.findByUserIdAndProblemIdAndLatestTrue(userId, validated.problemId())
-                .forEach(Submission::markAsNotLatest);
+        // 벌크 UPDATE라 영속성 컨텍스트를 거치지 않고 DB에 바로 반영된다. 이 트랜잭션
+        // 안에서 기존 Submission을 다시 읽지 않고 새 엔티티만 insert하므로
+        // clearAutomatically/flushAutomatically 없이도 순서가 어긋나지 않는다.
+        submissionRepository.markPreviousNotLatest(userId, validated.problemId());
 
         User user = userRepository.getReferenceById(userId);
         Problem problem = problemRepository.getReferenceById(validated.problemId());
