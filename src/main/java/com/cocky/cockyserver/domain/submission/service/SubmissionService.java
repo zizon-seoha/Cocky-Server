@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -46,6 +48,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class SubmissionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SubmissionService.class);
 
     private final ProblemRepository problemRepository;
     private final TestCaseRepository testCaseRepository;
@@ -95,6 +99,7 @@ public class SubmissionService {
         try {
             return instantFeedbackProvider.evaluate(aiSubmission);
         } catch (InstantFeedbackFailedException e) {
+            log.warn("AI 즉시 피드백 실패, 채점 결과만 저장: {}", e.getMessage());
             return null;
         }
     }
@@ -128,7 +133,7 @@ public class SubmissionService {
     /** 채점 결과를 받은 뒤 점수 산정·is_latest 갱신·저장까지 — 짧은 쓰기 트랜잭션. */
     private SubmissionResponse persist(Long userId, SubmissionRequest request, Validated validated,
                                        JudgeResult judgeResult, InstantFeedback feedback) {
-        BigDecimal score = judgeResult.verdict() == Verdict.AC
+        BigDecimal baseScore = judgeResult.verdict() == Verdict.AC
                 ? validated.difficulty().baseScore()
                 : BigDecimal.ZERO.setScale(2);
 
@@ -140,11 +145,13 @@ public class SubmissionService {
         User user = userRepository.getReferenceById(userId);
         Problem problem = problemRepository.getReferenceById(validated.problemId());
         Submission submission = new Submission(user, problem, request.language(), request.code());
-        submission.updateResult(judgeResult.verdict(), score);
 
-        if (feedback != null) {
-            applyFeedback(submission, judgeResult.verdict(), feedback);
-        }
+        // 엔티티는 "이 점수로 세팅해"라는 최종 지시만 받는다 — base/피드백 가산점의 합산은
+        // 서비스 책임이고, 엔티티는 그 산출 과정을 몰라도 된다.
+        BigDecimal finalScore = feedback != null
+                ? baseScore.add(applyFeedback(submission, judgeResult.verdict(), feedback))
+                : baseScore;
+        submission.updateResult(judgeResult.verdict(), finalScore);
 
         submissionRepository.save(submission);
 
@@ -152,16 +159,18 @@ public class SubmissionService {
     }
 
     /**
-     * WA일 땐 세 항목 모두 0점으로 총점을 base(0점)에 묶어 두되, 코멘트는
-     * 그대로 노출한다. AC일 땐 items를 category(enum)로 매칭해 순서에
-     * 의존하지 않고 세 점수를 뽑는다 — evaluate()가 성공 리턴하면
-     * TIME/READABILITY/ORIGINALITY 각 1개씩 정확히 3개임이 ai 모듈에서 보장된다.
+     * WA일 땐 세 항목 모두 0점으로 가산점을 0에 묶어 두되, 코멘트는 그대로 노출한다.
+     * AC일 땐 items를 category(enum)로 매칭해 순서에 의존하지 않고 세 점수를 뽑는다 —
+     * evaluate()가 성공 리턴했는데도 셋 중 하나라도 빠졌다면 AI 모듈 계약 위반이므로
+     * 조용히 넘기지 않고 즉시 실패시킨다.
+     *
+     * @return 세 항목 점수 합(피드백 가산점) — 최종 점수 계산에 쓰인다.
      */
-    private void applyFeedback(Submission submission, Verdict verdict, InstantFeedback feedback) {
+    private BigDecimal applyFeedback(Submission submission, Verdict verdict, InstantFeedback feedback) {
         if (verdict != Verdict.AC) {
             BigDecimal zero = new BigDecimal("0.00");
             submission.applyFeedback(zero, zero, zero, feedback.personality());
-            return;
+            return zero;
         }
 
         BigDecimal timeScore = null;
@@ -174,7 +183,12 @@ public class SubmissionService {
                 case ORIGINALITY -> originalityScore = item.score();
             }
         }
+        if (timeScore == null || readabilityScore == null || originalityScore == null) {
+            throw new IllegalStateException(
+                    "AI 피드백 항목이 3개(TIME/READABILITY/ORIGINALITY) 모두 있어야 합니다: " + feedback);
+        }
         submission.applyFeedback(timeScore, readabilityScore, originalityScore, feedback.personality());
+        return timeScore.add(readabilityScore).add(originalityScore);
     }
 
     private TestCaseIO toTestCaseIO(TestCase testCase) {

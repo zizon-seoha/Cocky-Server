@@ -93,6 +93,5 @@ public class Submission {
         this.readabilityScore = readabilityScore;
         this.originalityScore = originalityScore;
         this.feedbackComment = comment;
-        this.score = this.score.add(timeScore).add(readabilityScore).add(originalityScore);
     }
 }
