@@ -3,11 +3,9 @@ package com.cocky.cockyserver.infra.judge0;
 import com.cocky.cockyserver.domain.submission.judge.JudgeExecutionException;
 import com.cocky.cockyserver.infra.judge0.dto.Judge0SubmissionRequest;
 import com.cocky.cockyserver.infra.judge0.dto.Judge0SubmissionResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -20,14 +18,14 @@ public class Judge0Client {
 
     private final RestClient restClient;
 
-    public Judge0Client(Judge0Properties properties, ObjectMapper objectMapper) {
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
-        RestClient.Builder builder = RestClient.builder()
-                .baseUrl(properties.url())
-                .messageConverters(converters -> {
-                    converters.clear();
-                    converters.add(converter);
-                });
+    /**
+     * {@code restClientBuilder}는 Boot가 자동 구성한 프로토타입 빈을 그대로 받는다 — Boot 4.1
+     * 기본 컨버터 체인(Jackson 3 기반 {@code JacksonJsonHttpMessageConverter})을 그대로 쓰기 위해
+     * 여기서 컨버터를 수동으로 교체하지 않는다. 과거 classic {@code MappingJackson2HttpMessageConverter}를
+     * 수동 주입했을 때 요청 바디가 빈 채로 전송되는 문제가 있었다.
+     */
+    public Judge0Client(RestClient.Builder restClientBuilder, Judge0Properties properties) {
+        RestClient.Builder builder = restClientBuilder.baseUrl(properties.url());
         if (properties.token() != null && !properties.token().isBlank()) {
             builder.defaultHeader("X-Auth-Token", properties.token());
         }
