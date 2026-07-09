@@ -7,10 +7,10 @@ import com.cocky.cockyserver.domain.submission.entity.Verdict;
 import com.cocky.cockyserver.domain.submission.judge.JudgeRequest;
 import com.cocky.cockyserver.domain.submission.judge.JudgeResult;
 import com.cocky.cockyserver.domain.submission.judge.TestCaseIO;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 /**
  * 실제 Judge0 인스턴스가 필요한 수동 검증 — language_id 매핑/base64 인코딩/status 매핑이
@@ -30,7 +30,7 @@ class Judge0AdapterIT {
             envOrDefault("JUDGE0_URL", "http://localhost:2358"),
             envOrDefault("JUDGE0_TOKEN", ""),
             2000, 131072);
-    private final Judge0Client client = new Judge0Client(properties, new ObjectMapper());
+    private final Judge0Client client = new Judge0Client(RestClient.builder(), properties);
     private final LanguageMapper languageMapper = new LanguageMapper();
     private final Judge0Adapter adapter = new Judge0Adapter(client, languageMapper, properties);
 

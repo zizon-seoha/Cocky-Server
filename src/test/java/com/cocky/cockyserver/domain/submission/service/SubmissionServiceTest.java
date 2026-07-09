@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cocky.cockyserver.ai.port.InstantFeedbackProvider;
 import com.cocky.cockyserver.domain.problem.entity.Difficulty;
 import com.cocky.cockyserver.domain.problem.entity.Language;
 import com.cocky.cockyserver.domain.problem.entity.Problem;
@@ -64,6 +65,9 @@ class SubmissionServiceTest {
     private JudgeService judgeService;
 
     @Mock
+    private InstantFeedbackProvider instantFeedbackProvider;
+
+    @Mock
     private PlatformTransactionManager transactionManager;
 
     private SubmissionService submissionService;
@@ -72,7 +76,7 @@ class SubmissionServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         submissionService = new SubmissionService(problemRepository, testCaseRepository, submissionRepository,
-                userRepository, judgeService, clock, transactionManager);
+                userRepository, judgeService, instantFeedbackProvider, clock, transactionManager);
     }
 
     private Round activeRound() {
