@@ -82,16 +82,16 @@ public class ProblemGeneratorService implements ProblemGenerator {
                     continue;
                 }
 
-                List<ExampleIo> confirmed = verifyExamples(lang, parsed);
-                if (confirmed == null) {
-                    lastReason = "정답 코드가 예제를 통과하지 못함";
+                VerifyOutcome verified = verifyExamples(lang, parsed);
+                if (!verified.ok()) {
+                    lastReason = verified.reason();
                     log.info("[{}/{}] 재생성 — {} (시도 {})", lang, diff, lastReason, attempt);
                     continue;
                 }
 
                 recheckDifficulty(diff, parsed.statement);
                 GeneratedProblem problem = new GeneratedProblem(lang, diff, parsed.title,
-                        parsed.statement, confirmed, parsed.answerCode, req.roundSubtype());
+                        parsed.statement, verified.examples(), parsed.answerCode, req.roundSubtype());
                 return GenerationItem.success(problem, attempt);
             } catch (RuntimeException e) {
                 lastReason = e.getMessage();
@@ -104,24 +104,55 @@ public class ProblemGeneratorService implements ProblemGenerator {
     }
 
     /** 각 예제 input으로 정답 코드를 실행해 declared output과 일치하면 실행 출력으로 확정. */
-    private List<ExampleIo> verifyExamples(Language lang, Parsed parsed) {
+    private VerifyOutcome verifyExamples(Language lang, Parsed parsed) {
         if (executor instanceof DemoExecutor) {
             // 로컬 툴체인 부재 등 — 실행 검증 생략(선언된 예제 신뢰). 운영에서 local 실행기 권장.
             log.warn("데모 실행기 사용 중 — 정답 실행 검증을 생략한다");
-            return parsed.examples;
+            return VerifyOutcome.ok(parsed.examples);
         }
         List<ExampleIo> confirmed = new ArrayList<>();
         for (ExampleIo ex : parsed.examples) {
             ExecResult r = executor.run(new ExecRequest(lang, parsed.answerCode, ex.input()));
             if (!r.success()) {
-                return null;
+                String detail = r.timedOut() ? "타임아웃"
+                        : r.compileError() != null ? abbreviate(r.compileError())
+                        : "비정상 종료(exit=" + r.exitCode() + ")";
+                return VerifyOutcome.fail("정답 코드 실행 실패 — " + detail);
             }
             if (!normalize(r.stdout()).equals(normalize(ex.output()))) {
-                return null;
+                return VerifyOutcome.fail("정답 코드 출력 불일치 — 기대=[%s] 실제=[%s]"
+                        .formatted(abbreviate(ex.output()), abbreviate(r.stdout())));
             }
             confirmed.add(new ExampleIo(ex.input(), r.stdout().strip()));
         }
-        return confirmed.isEmpty() ? null : confirmed;
+        if (confirmed.isEmpty()) {
+            return VerifyOutcome.fail("검증할 예제가 없음");
+        }
+        return VerifyOutcome.ok(confirmed);
+    }
+
+    /** 예제 검증 결과. reason이 null이면 성공, 아니면 실패 사유(원인별 구분). */
+    private record VerifyOutcome(List<ExampleIo> examples, String reason) {
+        boolean ok() {
+            return reason == null;
+        }
+
+        static VerifyOutcome ok(List<ExampleIo> examples) {
+            return new VerifyOutcome(examples, null);
+        }
+
+        static VerifyOutcome fail(String reason) {
+            return new VerifyOutcome(null, reason);
+        }
+    }
+
+    /** 실패 사유 로그용 축약: 개행 제거 후 120자 제한. */
+    private static String abbreviate(String s) {
+        if (s == null) {
+            return "";
+        }
+        String oneLine = s.strip().replaceAll("\\s*\\R\\s*", " ⏎ ");
+        return oneLine.length() <= 120 ? oneLine : oneLine.substring(0, 117) + "...";
     }
 
     private void recheckDifficulty(Difficulty requested, String statement) {
