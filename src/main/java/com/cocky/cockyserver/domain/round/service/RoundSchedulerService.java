@@ -26,8 +26,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -74,7 +76,7 @@ public class RoundSchedulerService {
         this.writeTransaction = new TransactionTemplate(transactionManager);
     }
 
-    @Scheduled(cron = "0 0 23 * * *")
+    @Scheduled(cron = "0 0 23 * * *", zone = "Asia/Seoul")
     public void scheduledRoundGeneration() {
         triggerRoundGeneration();
     }
@@ -141,21 +143,32 @@ public class RoundSchedulerService {
         if (candidates == null || candidates.isEmpty()) {
             throw new IllegalStateException("topic '" + topicName + "'에 대한 roundSubtype 후보가 없습니다");
         }
-        return candidates.stream()
+        List<String> fresh = candidates.stream()
                 .filter(candidate -> !pastTypes.contains(candidate))
-                .findFirst()
-                .orElse(candidates.get(0));
+                .toList();
+        List<String> pool = fresh.isEmpty() ? candidates : fresh;
+        return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
     }
 
     /** 회차 생성 + 문제/테스트케이스/생성로그 저장 — 짧은 쓰기 트랜잭션. */
     private RoundGenerationResult persist(LocalDate targetDate, Plan plan, GenerationOutcome outcome) {
+        List<GenerationItem> items = outcome.items();
+        if (items.stream().noneMatch(GenerationItem::success)) {
+            log.error("스케줄러: {} 회차 문제 생성 전체 실패 — 회차를 생성하지 않음", targetDate);
+            return RoundGenerationResult.skipped(targetDate, "전체 문제 생성 실패");
+        }
+
         LocalDateTime openAt = targetDate.atStartOfDay();
         LocalDateTime closeAt = targetDate.atTime(23, 59, 59);
         Round round = new Round(plan.topic(), targetDate, openAt, closeAt);
         round.activate();
-        roundRepository.save(round);
+        try {
+            roundRepository.save(round);
+        } catch (DataIntegrityViolationException e) {
+            log.info("스케줄러: {} 라운드 저장 중 유니크 제약 위반 — 동시 실행으로 이미 생성됨", targetDate);
+            return RoundGenerationResult.skipped(targetDate, "동시 실행으로 라운드가 이미 생성됨");
+        }
 
-        List<GenerationItem> items = outcome.items();
         List<GenerationItem> failures = new ArrayList<>();
         int successCount = 0;
         for (int i = 0; i < items.size(); i++) {
