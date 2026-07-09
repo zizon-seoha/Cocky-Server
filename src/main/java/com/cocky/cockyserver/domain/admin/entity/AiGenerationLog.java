@@ -44,6 +44,9 @@ public class AiGenerationLog {
     @Column(nullable = false, length = 10)
     private GenerationStatus status;
 
+    @Column(length = 100)
+    private String subtype;
+
     @Lob
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
@@ -55,21 +58,23 @@ public class AiGenerationLog {
     private LocalDateTime createdAt;
 
     private AiGenerationLog(Round round, Problem problem, Integer sequenceNo, GenerationStatus status,
-                             String errorMessage, Integer retryCount) {
+                             String subtype, String errorMessage, Integer retryCount) {
         this.round = round;
         this.problem = problem;
         this.sequenceNo = sequenceNo;
         this.status = status;
+        this.subtype = subtype;
         this.errorMessage = errorMessage;
         this.retryCount = retryCount;
         this.createdAt = LocalDateTime.now();
     }
 
-    public static AiGenerationLog success(Round round, Problem problem, Integer sequenceNo, Integer retryCount) {
-        return new AiGenerationLog(round, problem, sequenceNo, GenerationStatus.SUCCESS, null, retryCount);
+    public static AiGenerationLog success(Round round, Problem problem, Integer sequenceNo, String subtype,
+                                           Integer retryCount) {
+        return new AiGenerationLog(round, problem, sequenceNo, GenerationStatus.SUCCESS, subtype, null, retryCount);
     }
 
     public static AiGenerationLog failure(Round round, Integer sequenceNo, String errorMessage, Integer retryCount) {
-        return new AiGenerationLog(round, null, sequenceNo, GenerationStatus.FAILED, errorMessage, retryCount);
+        return new AiGenerationLog(round, null, sequenceNo, GenerationStatus.FAILED, null, errorMessage, retryCount);
     }
 }
