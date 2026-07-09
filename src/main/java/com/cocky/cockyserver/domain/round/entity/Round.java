@@ -31,6 +31,7 @@ public class Round {
     @Column(name = "round_date", nullable = false)
     private LocalDate roundDate;
 
+
     @Column(name = "open_at", nullable = false)
     private LocalDateTime openAt;
 

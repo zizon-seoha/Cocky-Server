@@ -9,6 +9,7 @@ import com.cocky.cockyserver.ai.dto.Language;
 import com.cocky.cockyserver.ai.dto.Submission;
 import com.cocky.cockyserver.ai.port.InstantFeedbackFailedException;
 import com.cocky.cockyserver.ai.service.InstantFeedbackService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -39,7 +40,7 @@ class InstantFeedbackServiceTest {
         private int calls = 0;
 
         ScriptedOpenAiClient(AiProperties props, Object... script) {
-            super(props);
+            super(props, new ObjectMapper());
             this.script = script;
         }
 

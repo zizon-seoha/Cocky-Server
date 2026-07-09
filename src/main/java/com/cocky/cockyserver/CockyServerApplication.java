@@ -3,6 +3,7 @@ package com.cocky.cockyserver;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * UserDetailsServiceAutoConfiguration을 제외한다: JWT 인증만 쓰고
@@ -10,6 +11,7 @@ import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoCon
  * 부팅 시 쓰이지도 않는 in-memory 계정과 generated password 로그가 매번 남는다.
  */
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
+@EnableScheduling
 public class CockyServerApplication {
 
     public static void main(String[] args) {

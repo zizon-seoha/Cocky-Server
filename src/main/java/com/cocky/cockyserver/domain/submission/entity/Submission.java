@@ -1,5 +1,6 @@
 package com.cocky.cockyserver.domain.submission.entity;
 
+import com.cocky.cockyserver.domain.problem.entity.Language;
 import com.cocky.cockyserver.domain.problem.entity.Problem;
 import com.cocky.cockyserver.domain.user.entity.User;
 import jakarta.persistence.Column;
@@ -51,6 +52,19 @@ public class Submission {
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal score;
 
+    @Column(name = "time_score", precision = 5, scale = 2)
+    private BigDecimal timeScore;
+
+    @Column(name = "readability_score", precision = 5, scale = 2)
+    private BigDecimal readabilityScore;
+
+    @Column(name = "originality_score", precision = 5, scale = 2)
+    private BigDecimal originalityScore;
+
+    @Lob
+    @Column(name = "feedback_comment", columnDefinition = "TEXT")
+    private String feedbackComment;
+
     @Column(name = "is_latest", nullable = false)
     private boolean latest;
 
@@ -73,7 +87,11 @@ public class Submission {
         this.score = score;
     }
 
-    public void markAsNotLatest() {
-        this.latest = false;
+    public void applyFeedback(BigDecimal timeScore, BigDecimal readabilityScore,
+                               BigDecimal originalityScore, String comment) {
+        this.timeScore = timeScore;
+        this.readabilityScore = readabilityScore;
+        this.originalityScore = originalityScore;
+        this.feedbackComment = comment;
     }
 }
