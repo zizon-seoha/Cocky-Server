@@ -31,11 +31,20 @@ public final class PromptTemplates {
             지문은 출력 순서·정렬 기준·동률 처리를 명시해 정답 출력이 유일하게
             결정되어야 한다. examples의 output은 answerCode를 실제 실행한 결과와
             정확히 일치해야 한다(추측으로 쓰지 말 것).
+            지문이 해 존재를 보장하는 문제라면 answerCode에 '해 없음' 경로(-1 반환 등)를
+            넣지 말 것. 출력 전에 각 예제 input으로 answerCode 실행을 단계별로 추적해
+            output과 일치하는지 확인할 것. 경계값(포함/미포함)을 지문 기준으로 재확인할 것.
             """;
 
     public static String generationUser(GenerationRequest req, Language lang, Difficulty diff) {
+        return generationUser(req, lang, diff, null);
+    }
+
+    /** lastFailure가 있으면(재시도) 직전 실패 사유를 붙여 모델이 같은 실수를 교정하게 한다. */
+    public static String generationUser(GenerationRequest req, Language lang, Difficulty diff,
+                                        String lastFailure) {
         String pastTypes = req.pastTypes().isEmpty() ? "(없음)" : String.join(", ", req.pastTypes());
-        return """
+        String base = """
                 언어: %s
                 난이도: %s
                 이번 주 대주제: %s
@@ -44,6 +53,13 @@ public final class PromptTemplates {
                 요구사항: 위 유형과 겹치지 않는 새로운 문제. 난이도에 맞는 복잡도.
                 JSON 스키마로만 응답.
                 """.formatted(lang, diff, req.weeklyTopic(), req.roundSubtype(), pastTypes);
+        if (lastFailure == null || lastFailure.isBlank()) {
+            return base;
+        }
+        return base + """
+                직전 시도 실패 사유: %s
+                위 실패 원인을 교정한 새 문제를 생성하라.
+                """.formatted(lastFailure);
     }
 
     public static final String DIFFICULTY_SYSTEM = """

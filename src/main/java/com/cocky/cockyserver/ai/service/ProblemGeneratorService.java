@@ -70,9 +70,11 @@ public class ProblemGeneratorService implements ProblemGenerator {
         String lastReason = "알 수 없음";
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
+                // 재시도면 직전 실패 사유를 프롬프트에 붙여 같은 실수 재생산을 막는다.
+                String feedback = attempt == 1 ? null : lastReason;
                 String json = openAi.chatJson(props.models().generation(),
                         PromptTemplates.GENERATION_SYSTEM,
-                        PromptTemplates.generationUser(req, lang, diff));
+                        PromptTemplates.generationUser(req, lang, diff, feedback));
                 Parsed parsed = parse(json);
 
                 if (similarity.isDuplicate(parsed.statement, seenStatements,
