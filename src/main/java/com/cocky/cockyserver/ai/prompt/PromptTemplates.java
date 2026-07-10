@@ -28,6 +28,9 @@ public final class PromptTemplates {
             }
             정답 코드는 표준입력을 읽어 표준출력으로 답을 낸다. 예제 input을 그대로
             표준입력에 넣으면 output이 나와야 한다.
+            지문은 출력 순서·정렬 기준·동률 처리를 명시해 정답 출력이 유일하게
+            결정되어야 한다. examples의 output은 answerCode를 실제 실행한 결과와
+            정확히 일치해야 한다(추측으로 쓰지 말 것).
             """;
 
     public static String generationUser(GenerationRequest req, Language lang, Difficulty diff) {
