@@ -119,9 +119,12 @@ public class ProblemGeneratorService implements ProblemGenerator {
                         : "비정상 종료(exit=" + r.exitCode() + ")";
                 return VerifyOutcome.fail("정답 코드 실행 실패 — " + detail);
             }
-            if (!normalize(r.stdout()).equals(normalize(ex.output()))) {
+            String expected = normalize(ex.output());
+            String actual = normalize(r.stdout());
+            if (!expected.equals(actual)) {
+                // 비교에 쓴 정규화 값을 그대로 찍는다 — 공백/개행 차이도 escape로 가시화.
                 return VerifyOutcome.fail("정답 코드 출력 불일치 — 기대=[%s] 실제=[%s]"
-                        .formatted(abbreviate(ex.output()), abbreviate(r.stdout())));
+                        .formatted(visible(expected), visible(actual)));
             }
             confirmed.add(new ExampleIo(ex.input(), r.stdout().strip()));
         }
@@ -146,7 +149,14 @@ public class ProblemGeneratorService implements ProblemGenerator {
         }
     }
 
-    /** 실패 사유 로그용 축약: 개행 제거 후 120자 제한. */
+    /** 출력 불일치 로그용: 제어문자를 escape로 가시화하고 120자 제한. 원문 공백 보존. */
+    private static String visible(String s) {
+        String escaped = s.replace("\\", "\\\\").replace("\n", "\\n")
+                .replace("\r", "\\r").replace("\t", "\\t");
+        return escaped.length() <= 120 ? escaped : escaped.substring(0, 117) + "...";
+    }
+
+    /** 컴파일/실행 오류 로그용 축약: 개행 제거 후 120자 제한. */
     private static String abbreviate(String s) {
         if (s == null) {
             return "";
